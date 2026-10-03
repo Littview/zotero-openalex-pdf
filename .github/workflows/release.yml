@@ -1,0 +1,67 @@
+name: Release
+
+# Tag a release to publish it:
+#   bump "version" in manifest.json and package.json, commit, then git tag -a v0.3.1 -m 0.3.1 && git push --follow-tags
+# The manifest version must match the tag.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      # Checks out main rather than the tag, because the job pushes update.json back.
+      # This assumes the release tag points at the head of main, which the version
+      # check below effectively enforces.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check that the tag matches manifest.json
+        run: |
+          MANIFEST_VERSION=$(node -p "require('./manifest.json').version")
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          if [ "$MANIFEST_VERSION" != "$TAG_VERSION" ]; then
+            echo "Tag $TAG_VERSION does not match manifest.json version $MANIFEST_VERSION"
+            exit 1
+          fi
+
+      - run: npm run lint
+
+      - name: Build XPI
+        id: build
+        run: echo "xpi=$(npm run --silent build)" >> "$GITHUB_OUTPUT"
+
+      - name: Generate update.json
+        run: node scripts/update-manifest.js "${{ steps.build.outputs.xpi }}"
+
+      # A copy without the version in its name, so the README can link to
+      # releases/latest/download/zotero-openalex-pdf.xpi and never go stale.
+      # update.json keeps pointing at the versioned file, whose hash it records.
+      - name: Add a stable-name copy
+        run: cp "${{ steps.build.outputs.xpi }}" build/zotero-openalex-pdf.xpi
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ steps.build.outputs.xpi }}
+            build/zotero-openalex-pdf.xpi
+          generate_release_notes: true
+
+      - name: Commit update.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add update.json
+          git commit -m "Update update.json for ${GITHUB_REF_NAME}" || exit 0
+          git push origin HEAD:main

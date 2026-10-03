@@ -1,0 +1,74 @@
+<!--
+	Zotero OpenAlex PDF Finder — preference pane.
+	Copyright (c) 2026 Littview Inc. — MIT licensed. See LICENSE.
+
+	Loaded as a XUL fragment: XUL is the default namespace, HTML lives under html:.
+-->
+<vbox id="openalex-pdf-prefpane">
+	<linkset>
+		<html:link rel="localization" href="openalex-pdf.ftl"/>
+	</linkset>
+
+	<vbox class="main-section">
+		<groupbox aria-labelledby="openalex-pdf-account-title">
+			<label>
+				<html:h2 id="openalex-pdf-account-title" data-l10n-id="openalex-pdf-prefs-account-header"/>
+			</label>
+
+			<hbox align="center">
+				<label data-l10n-id="openalex-pdf-prefs-email-label" control="openalex-pdf-email"/>
+				<html:input type="text" id="openalex-pdf-email" class="flex-1"
+						preference="extensions.zotero.openalexpdf.email"/>
+			</hbox>
+			<description class="description" data-l10n-id="openalex-pdf-prefs-email-description"/>
+
+			<hbox align="center">
+				<label data-l10n-id="openalex-pdf-prefs-apikey-label" control="openalex-pdf-apikey"/>
+				<html:input type="password" id="openalex-pdf-apikey" class="flex-1"
+						preference="extensions.zotero.openalexpdf.apiKey"/>
+				<button data-l10n-id="openalex-pdf-prefs-apikey-test" native="true"
+						oncommand="ZoteroOpenAlexPrefs.testKey()"/>
+				<button data-l10n-id="openalex-pdf-prefs-apikey-get" native="true"
+						oncommand="ZoteroOpenAlexPrefs.openKeyPage()"/>
+			</hbox>
+			<description class="description" id="openalex-pdf-apikey-status"/>
+			<description class="description" data-l10n-id="openalex-pdf-prefs-apikey-description"/>
+		</groupbox>
+
+		<groupbox aria-labelledby="openalex-pdf-sources-title">
+			<label>
+				<html:h2 id="openalex-pdf-sources-title" data-l10n-id="openalex-pdf-prefs-sources-header"/>
+			</label>
+
+			<checkbox data-l10n-id="openalex-pdf-prefs-hosted" native="true"
+					preference="extensions.zotero.openalexpdf.useHostedContent"/>
+			<description class="description" data-l10n-id="openalex-pdf-prefs-hosted-description"/>
+
+			<checkbox data-l10n-id="openalex-pdf-prefs-prefer-hosted" native="true"
+					preference="extensions.zotero.openalexpdf.preferHostedContent"/>
+			<description class="description" data-l10n-id="openalex-pdf-prefs-prefer-hosted-description"/>
+		</groupbox>
+
+		<groupbox aria-labelledby="openalex-pdf-matching-title">
+			<label>
+				<html:h2 id="openalex-pdf-matching-title" data-l10n-id="openalex-pdf-prefs-matching-header"/>
+			</label>
+
+			<checkbox data-l10n-id="openalex-pdf-prefs-title-search" native="true"
+					preference="extensions.zotero.openalexpdf.titleSearchFallback"/>
+			<description class="description" data-l10n-id="openalex-pdf-prefs-title-search-description"/>
+
+			<checkbox data-l10n-id="openalex-pdf-prefs-skip" native="true"
+					preference="extensions.zotero.openalexpdf.skipItemsWithPDF"/>
+
+			<checkbox data-l10n-id="openalex-pdf-prefs-extra" native="true"
+					preference="extensions.zotero.openalexpdf.saveWorkIDToExtra"/>
+		</groupbox>
+
+		<description class="description" id="openalex-pdf-about" style="margin-top: 1.5em">
+			<html:span data-l10n-id="openalex-pdf-prefs-about"/>
+			<label is="text-link" data-l10n-id="openalex-pdf-prefs-about-link" style="margin-inline-start: 0.3em"
+					onclick="ZoteroOpenAlexPrefs.openLittview()"/>
+		</description>
+	</vbox>
+</vbox>

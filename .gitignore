@@ -1,0 +1,5 @@
+build/
+*.xpi
+.DS_Store
+node_modules/
+.specstory/

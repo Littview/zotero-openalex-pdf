@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none">
+	<path fill="context-fill" fill-opacity="context-fill-opacity" fill-rule="evenodd" clip-rule="evenodd"
+		d="M3 1 H8.5 L12 4.5 V6.82 A4.3 4.3 0 1 0 7.92 14 H3 Z M4.6 3.4 h3.4 v1.2 H4.6 Z M4.6 6 h4.4 v1.2 H4.6 Z M4.6 8.6 h2 v1.2 H4.6 Z"/>
+	<path fill="context-fill" fill-opacity="context-fill-opacity" fill-rule="evenodd" clip-rule="evenodd"
+		d="M11 7.6 a3.4 3.4 0 1 0 0 6.8 a3.4 3.4 0 1 0 0-6.8 Z M11 8.9 a2.1 2.1 0 1 1 0 4.2 a2.1 2.1 0 1 1 0-4.2 Z"/>
+	<path fill="context-fill" fill-opacity="context-fill-opacity"
+		d="M12.9 13.85 L13.85 12.9 L15.75 14.8 L14.8 15.75 Z"/>
+</svg>

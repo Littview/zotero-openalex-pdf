@@ -1,0 +1,20 @@
+{
+	"manifest_version": 2,
+	"name": "Zotero OpenAlex PDF Finder",
+	"version": "0.3.1",
+	"description": "Find and attach open-access PDFs for your Zotero items using OpenAlex.",
+	"homepage_url": "https://github.com/Littview/zotero-openalex-pdf",
+	"author": "Littview",
+	"icons": {
+		"48": "icons/openalex-48.svg",
+		"96": "icons/openalex-96.svg"
+	},
+	"applications": {
+		"zotero": {
+			"id": "openalex-pdf@littview.com",
+			"update_url": "https://raw.githubusercontent.com/Littview/zotero-openalex-pdf/main/update.json",
+			"strict_min_version": "7.0",
+			"strict_max_version": "*"
+		}
+	}
+}
