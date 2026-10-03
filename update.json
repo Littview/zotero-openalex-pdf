@@ -5,7 +5,7 @@
 				{
 					"version": "0.3.1",
 					"update_link": "https://github.com/Littview/zotero-openalex-pdf/releases/download/v0.3.1/zotero-openalex-pdf-0.3.1.xpi",
-					"update_hash": "sha256:e4524960b74ea359019c8f94e6cf01a5a41f232846ab955d4106c94be609fe3e",
+					"update_hash": "sha256:4ff9296295991920370ed511490b76b03327d215d1ba5af315cd17e82293d728",
 					"applications": {
 						"zotero": {
 							"strict_min_version": "7.0",
