@@ -43,6 +43,9 @@ Zotero checks for new versions of the plugin automatically.
 1. Select one or many items in your library (**Cmd/Ctrl + A** selects the whole collection).
 2. **Right-click → Find PDF via OpenAlex.**
    You can also use the menu bar: **Tools → Find PDFs via OpenAlex**.
+
+   <img src="docs/images/right-click-menu.png" alt="Zotero's right-click menu with Find PDF via OpenAlex as the last item" width="300">
+
 3. A window lists every item and what happened to it. You can keep working while it runs,
    and **Cancel** stops it after the current item.
 
