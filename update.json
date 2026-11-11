@@ -3,9 +3,9 @@
 		"openalex-pdf@littview.com": {
 			"updates": [
 				{
-					"version": "0.4.0",
-					"update_link": "https://github.com/Littview/zotero-openalex-pdf/releases/download/v0.4.0/zotero-openalex-pdf-0.4.0.xpi",
-					"update_hash": "sha256:aab6c84210529084051660f5eab85ff7269046ae72350928e262134f77971a3f",
+					"version": "0.4.1",
+					"update_link": "https://github.com/Littview/zotero-openalex-pdf/releases/download/v0.4.1/zotero-openalex-pdf-0.4.1.xpi",
+					"update_hash": "sha256:a817767ef827e09f492053d191e1b2215b526856f755c3c5dc28a06aa66cd5d1",
 					"applications": {
 						"zotero": {
 							"strict_min_version": "7.0",
