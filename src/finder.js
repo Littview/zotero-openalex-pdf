@@ -180,13 +180,14 @@ ZoteroOpenAlex.Finder = {
 		let skipWithPDF = ZoteroOpenAlex.getPref('skipItemsWithPDF');
 
 		for (let item of items) {
-			if (!item) {
+			// Nothing in the trash gets a PDF, whether it was picked there or passed in
+			if (!item || item.deleted) {
 				continue;
 			}
 			if (!item.isRegularItem() && item.parentItem) {
 				item = item.parentItem;
 			}
-			if (!item.isRegularItem() || seen.has(item.id)) {
+			if (!item.isRegularItem() || item.deleted || seen.has(item.id)) {
 				continue;
 			}
 			seen.add(item.id);
