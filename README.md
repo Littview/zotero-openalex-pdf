@@ -4,7 +4,7 @@
 
 The plugin looks each reference up in [OpenAlex](https://openalex.org), the open catalog of
 250+ million scholarly works, finds a legal open-access copy (publisher, PubMed Central,
-arXiv, institutional repositories), and attaches it to the item.
+Europe PMC, arXiv, institutional repositories), and attaches it to the item.
 
 Made for literature reviews: you've just imported 300 references from a database search
 and you need the PDFs behind them.
@@ -64,6 +64,7 @@ again later.
 | **Not found on OpenAlex** | OpenAlex has no record matching the DOI, PMID or title. Common for conference abstracts, grey literature and very recent items. |
 | **No full text available** | The work was found, but no open-access copy exists. It's probably paywalled. |
 | **No PDF could be downloaded** | Open-access links exist, but they didn't return a PDF. Publisher sites sometimes block downloads. |
+| **Europe PMC is limiting downloads** | The PDF is on Europe PMC, which only hands out a few at a time. Run the plugin again in a few minutes; items that already have a PDF are skipped. |
 | **Possible match rejected — the years disagree** | A work with exactly this title exists, but in a different year. Check it by hand; the plugin won't guess. |
 
 ## Questions

@@ -13,6 +13,13 @@ ZoteroOpenAlex.Finder = {
 
 	MAX_RESOLVERS: 8,
 
+	// Europe PMC allows only a few downloads at a time and answers the rest with 429
+	// and a Retry-After. How many times to wait that out for one item.
+	EUROPE_PMC_RETRIES: 2,
+
+	// Set once waiting has not been enough, so that the rest of the run stops waiting
+	_europePMCThrottled: false,
+
 	// A second invocation while a run is in flight would see items whose download has
 	// not landed yet and attach a duplicate, and would clear the first run's rows
 	_running: false,
@@ -57,6 +64,7 @@ ZoteroOpenAlex.Finder = {
 
 	async _process(candidates, hostedWanted) {
 		ZoteroOpenAlex.API.resetKeyState();
+		this._europePMCThrottled = false;
 
 		let progress = ZoteroOpenAlex.createProgress();
 		for (let item of candidates) {
@@ -399,6 +407,7 @@ ZoteroOpenAlex.Finder = {
 		let useHosted = hostedState.enabled && api.hasHostedPDF(work) && !!api.hostedPDFURL(work);
 		let preferHosted = !!ZoteroOpenAlex.getPref('preferHostedContent');
 		let resolvers = this._buildURLResolvers(work, this._arXivWork(item));
+		let pmc = this._pmcCopy(work);
 
 		let attempts = [];
 		if (useHosted && preferHosted) {
@@ -406,6 +415,9 @@ ZoteroOpenAlex.Finder = {
 		}
 		if (resolvers.length) {
 			attempts.push('links');
+		}
+		if (pmc) {
+			attempts.push('europepmc');
 		}
 		if (useHosted && !preferHosted) {
 			attempts.push('hosted');
@@ -429,6 +441,16 @@ ZoteroOpenAlex.Finder = {
 						return {
 							attached: true,
 							message: ZoteroOpenAlex.getString('openalex-pdf-result-attached-hosted')
+						};
+					}
+				}
+				else if (attempt === 'europepmc') {
+					progress.processing(item, 'Europe PMC');
+					let attachment = await this._attachEuropePMCPDF(item, pmc);
+					if (attachment) {
+						return {
+							attached: true,
+							message: ZoteroOpenAlex.getString('openalex-pdf-result-attached-link')
 						};
 					}
 				}
@@ -473,15 +495,101 @@ ZoteroOpenAlex.Finder = {
 	 * Zotero's URL resolvers, so that the authenticated URL is never persisted on
 	 * the attachment item. The item records the plain, key-free URL instead.
 	 */
-	async _attachHostedPDF(item, work) {
+	_attachHostedPDF(item, work) {
+		return this._attachDownloadedPDF(item, Zotero.getString('attachment.fullText'),
+			path => ZoteroOpenAlex.API.downloadHostedPDF(work, path));
+	},
+
+	/**
+	 * Europe PMC's mirror of PubMed Central, tried once Zotero's downloader has given
+	 * up on the links. OpenAlex mostly lists a PMC copy with a landing page and no
+	 * pdf_url, and Zotero finds nothing on that page because NCBI answers it with a
+	 * browser check. The PMCID is exact, so Europe PMC can be asked for the PDF by ID.
+	 *
+	 * PMC's own PDF address is deliberately not built the same way: its copyright
+	 * notice prohibits systematic downloading from the PMC website.
+	 *
+	 * We download it ourselves because of how Europe PMC misbehaves. It answers
+	 * HTTP 500 for most NIH author manuscripts, which Zotero's downloader retries with
+	 * a growing delay, long enough on older versions to stall the run. And it
+	 * throttles hard, which the downloader treats as one more failed link.
+	 *
+	 * @return {Promise<Zotero.Item|null>} the attachment, or null without a PDF
+	 */
+	_attachEuropePMCPDF(item, pmc) {
+		return this._attachDownloadedPDF(item, this._titleForVersion(pmc.version),
+			path => this._downloadEuropePMCPDF(pmc.id, path));
+	},
+
+	/**
+	 * @return {Promise<String|null>} the URL the file came from, or null without a PDF
+	 * @throws when Europe PMC keeps throttling, with a message for the item's row
+	 */
+	async _downloadEuropePMCPDF(pmcid, path) {
 		let api = ZoteroOpenAlex.API;
-		let title = Zotero.getString('attachment.fullText');
+		let url = `https://europepmc.org/api/getPdf?pmcid=${pmcid}`;
+		let retries = this._europePMCThrottled ? 0 : this.EUROPE_PMC_RETRIES;
+		let xhr;
+		for (let attempt = 0; ; attempt++) {
+			try {
+				xhr = await Zotero.HTTP.request('GET', url, {
+					responseType: 'arraybuffer',
+					timeout: 120000,
+					successCodes: false,
+					errorDelayMax: 0
+				});
+			}
+			catch (e) {
+				ZoteroOpenAlex.log(`Europe PMC request failed for ${pmcid}: ${e}`);
+				return null;
+			}
+			if (xhr.status !== 429 || attempt >= retries) {
+				break;
+			}
+			let retryAfter = parseInt(xhr.getResponseHeader('Retry-After'), 10);
+			if (!(retryAfter > 0) || retryAfter > 30) {
+				retryAfter = 10;
+			}
+			ZoteroOpenAlex.log(`Europe PMC is throttling; retrying in ${retryAfter}s`);
+			await api.delay(retryAfter * 1000);
+		}
+
+		// Its limit can outlast the wait it asks for. One item paying for that is
+		// enough: the rest of the run tries once each, and a later run gets the others
+		this._europePMCThrottled = xhr.status === 429;
+		if (xhr.status === 429) {
+			throw api.error('europepmc-throttled',
+				ZoteroOpenAlex.getString('openalex-pdf-error-europepmc-throttled'), 429);
+		}
+
+		let bytes = xhr.status === 200 ? new Uint8Array(xhr.response) : null;
+		if (!bytes || !api.looksLikePDF(bytes)) {
+			ZoteroOpenAlex.log(`Europe PMC has no PDF to give for ${pmcid} (HTTP ${xhr.status})`);
+			return null;
+		}
+		await IOUtils.write(path, bytes);
+		return url;
+	},
+
+	/**
+	 * Attach a PDF that we fetch ourselves instead of leaving it to Zotero's downloader.
+	 *
+	 * @param {Zotero.Item} item
+	 * @param {String} title - attachment title
+	 * @param {Function} download - async (path) => URL to record on the attachment
+	 *     once the PDF is written to `path`, or null when there is none
+	 * @return {Promise<Zotero.Item|null>}
+	 */
+	async _attachDownloadedPDF(item, title, download) {
 		let tempDir = (await Zotero.Attachments.createTemporaryStorageDirectory()).path;
 		let tempPath = PathUtils.join(tempDir, 'openalex.pdf');
 
-		let attachment;
+		let attachment = null;
 		try {
-			let canonicalURL = await api.downloadHostedPDF(work, tempPath);
+			let url = await download(tempPath);
+			if (!url) {
+				return null;
+			}
 			attachment = await Zotero.Attachments.importFromFile({
 				file: tempPath,
 				parentItemID: item.id,
@@ -492,9 +600,8 @@ ZoteroOpenAlex.Finder = {
 				}),
 				moveFile: true
 			});
-			if (attachment && canonicalURL) {
-				// The key-free URL, never the authenticated request we actually made
-				attachment.setField('url', canonicalURL);
+			if (attachment) {
+				attachment.setField('url', url);
 				attachment.setField('accessDate', 'CURRENT_TIMESTAMP');
 				await attachment.saveTx();
 			}
@@ -504,6 +611,12 @@ ZoteroOpenAlex.Finder = {
 		}
 
 		return attachment;
+	},
+
+	/** The titles Zotero's own downloader gives: "Accepted Version", "Full Text"… */
+	_titleForVersion(version) {
+		let name = { acceptedVersion: 'acceptedVersion', submittedVersion: 'submittedVersion' }[version];
+		return Zotero.getString('attachment.' + (name || 'fullText'));
 	},
 
 	/**
@@ -534,10 +647,7 @@ ZoteroOpenAlex.Finder = {
 				continue;
 			}
 			let sourceName = (location.source && location.source.display_name) || 'OpenAlex';
-			let rank = (location.is_oa ? 0 : 100)
-				+ (this.VERSION_RANK[location.version] !== undefined
-					? this.VERSION_RANK[location.version]
-					: 3) * 10;
+			let rank = this._locationRank(location);
 
 			if (location.pdf_url && !seen.has(location.pdf_url)) {
 				seen.add(location.pdf_url);
@@ -568,6 +678,46 @@ ZoteroOpenAlex.Finder = {
 			accessMethod: entry.accessMethod,
 			articleVersion: entry.articleVersion
 		}));
+	},
+
+	/** Lower is better: open access before paywalled, then by version. */
+	_locationRank(location) {
+		return (location.is_oa ? 0 : 100)
+			+ (this.VERSION_RANK[location.version] !== undefined
+				? this.VERSION_RANK[location.version]
+				: 3) * 10;
+	},
+
+	/**
+	 * The work's PubMed Central copy as `{ id: 'PMC7315193', is_oa, version }`, or null.
+	 * With several PMC locations, the best-ranked one.
+	 *
+	 * OpenAlex writes the ID with its prefix in location URLs and without it in
+	 * `ids.pmcid` ("https://www.ncbi.nlm.nih.gov/pmc/articles/7315193").
+	 */
+	_pmcCopy(work) {
+		const PMC_URL = /\b(?:ncbi\.nlm\.nih\.gov|europepmc\.org)\/(?:pmc\/)?articles\/(?:pmc)?(\d+)/i;
+		let best = null;
+		for (let location of work.locations || []) {
+			if (!location) {
+				continue;
+			}
+			let match = PMC_URL.exec(location.landing_page_url || '')
+				|| PMC_URL.exec(location.pdf_url || '');
+			if (!match) {
+				continue;
+			}
+			let copy = { id: 'PMC' + match[1], is_oa: !!location.is_oa, version: location.version };
+			if (!best || this._locationRank(copy) < this._locationRank(best)) {
+				best = copy;
+			}
+		}
+		if (best) {
+			return best;
+		}
+		// Known by ID only, so nothing says which version PMC holds
+		let match = /(?:^|\/)(?:pmc)?(\d+)\/?\s*$/i.exec((work.ids && work.ids.pmcid) || '');
+		return match ? { id: 'PMC' + match[1], is_oa: true, version: undefined } : null;
 	},
 
 	async _saveWorkID(item, work) {

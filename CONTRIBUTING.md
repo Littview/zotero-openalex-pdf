@@ -45,6 +45,21 @@ Items with an arXiv ID also get arXiv's own PDF as a source, so they are covered
 when OpenAlex has no record under arXiv's DOI (common for preprints from before 2022) or
 its only exact-title record carries a re-registered DOI with the wrong year.
 
+Works with a PubMed Central copy get one extra source, tried after the links:
+`europepmc.org/api/getPdf?pmcid=PMC…`, Europe PMC's mirror, addressed by the PMCID that
+OpenAlex supplies. It is needed because OpenAlex usually lists a PMC copy with a landing
+page and no `pdf_url`, and Zotero can't find the PDF on that page (NCBI answers scripted
+requests with a browser check). PMC's own PDF address is deliberately not constructed:
+its [copyright notice](https://pmc.ncbi.nlm.nih.gov/about/copyright/) prohibits
+systematic downloading from the PMC website.
+
+The plugin downloads the Europe PMC file itself instead of passing the address to
+Zotero, for two reasons. Europe PMC returns HTTP 500 for most NIH author manuscripts,
+which Zotero's downloader retries with a long backoff. And it allows only a few
+downloads at a time, so a 429 is waited out (`Retry-After`, at most twice). If it still
+throttles, that item is reported as "Europe PMC is limiting downloads" and the rest of
+the run stops waiting.
+
 Once a work is matched, sources are tried in this order: direct PDF links before landing
 pages, published before accepted before submitted versions, open access before
 paywalled. The OpenAlex-hosted copy (`content.openalex.org`, needs a key) is tried last

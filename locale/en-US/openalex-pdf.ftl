@@ -35,6 +35,7 @@ openalex-pdf-result-not-downloaded = No PDF could be downloaded
 openalex-pdf-error-auth = OpenAlex rejected the API key. Check it in the plugin preferences.
 openalex-pdf-error-rate-limit = OpenAlex rate limit reached. Try again later or add an API key.
 openalex-pdf-error-offline = No internet connection
+openalex-pdf-error-europepmc-throttled = Europe PMC is limiting downloads. Run again in a few minutes.
 openalex-pdf-error-unexpected = Unexpected error — see the Zotero debug output for details
 
 ## Preferences
